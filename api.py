@@ -5,12 +5,14 @@ import time
 from pynvml import *
 from torch.nn import functional as F
 import numpy as np
+from urllib.parse import urlsplit
 import json
 from rwkv_tokenizer import TRIE_TOKENIZER
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
-
+ctx_gpt_mode_chunks = 64
+base_url = "https://api.openai.com/"
 #os.environ["CUDA_VISIBLE_DEVICES"] = ''
 os.environ["RWKV_JIT_ON"] = '1'
 os.environ["RWKV_CUDA_ON"] = '1' # if '1' then use CUDA kernel for seq mode (much faster)
@@ -19,7 +21,7 @@ torch.set_num_threads(4)
 
 from rwkv.model import RWKV
 current_dir = os.path.dirname(os.path.realpath(__file__))
-model_path = current_dir + '/rwkv-ai-town-3b.pth'
+model_path = '/home/darok/Documents/GitHub/ai-town/rwkv-3b-ai-town-v1.pth'#current_dir + '/rwkv-ai-town-3b.pth'rwkv-3b-ai-town-v1.pth
 
 models = [
     RWKV(model=model_path, strategy='cuda bf16'),
@@ -46,7 +48,10 @@ async def getModel():
                 #lockedModels[i] = True
                 return models[i], pipelines[i], i
         await asyncio.sleep(0.1)
-        
+
+def lockModel(i):
+    lockedModels[i] = True
+
 def unlockModel(i):
     lockedModels[i] = False
 
@@ -102,8 +107,8 @@ async def evaluate(
     model,
     pipeline,
     token_count=1024,
-    temperature=1.4,
-    top_p=0.3,
+    temperature=1.7,
+    top_p=0.6,
     presencePenalty = 0.5,
     countPenalty = 0.5,
     typicalSampling = True,
@@ -137,6 +142,7 @@ async def evaluate(
         if token in args.token_stop:
             tmp = pipeline.decode(all_tokens[out_last:])
             yield tmp, state
+            del out
             break
         all_tokens += [token]
         if token not in occurrence:
@@ -149,6 +155,13 @@ async def evaluate(
             out_str += tmp
             yield tmp, state
             out_last = i + 1
+
+        del out
+
+    del occurrence
+    torch.cuda.empty_cache()
+    gc.collect()
+    
 
 
 # time the evaluation
@@ -187,8 +200,15 @@ async def buildPrompt(conversation, model, pipeline):
     # add system prompt to cache
     cacheKey = hash(fullprompt)
     if cacheKey not in cachedStates.keys():
-        out, statea = model.forward(pipeline.encode(fullprompt)[-ctx_limit:], None)
-        cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # mod30 secs
+        lockModel(0)
+        input_tokens = pipeline.encode(fullprompt)[-ctx_limit:]
+        statea = None
+        for i in range(0, len(input_tokens), ctx_gpt_mode_chunks):
+            out, statea = model.forward(input_tokens[i:min(ctx_gpt_mode_chunks, len(input_tokens)-i) + i], statea)
+            gc.collect()
+            del out
+        unlockModel(0)
+        cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # cache 30 secs
     
     for m in conversation[1:-1]:
         if m['role'] == 'user':
@@ -206,7 +226,7 @@ async def buildPrompt(conversation, model, pipeline):
         prompt = ""
         # reset expiration
         cachedStates[cacheKey] = (state, time.time() + 60) # 1 minute
-        state = copy.deepcopy(state)
+        state = copy.copy(state)
         print("## Using Cached State ##")
     else:
         prompt = fullprompt
@@ -313,30 +333,8 @@ async def proxy_embedding(request):
                 async for data in response.content.iter_any():
                     full_response += data
                     await response.write(data)
-
-                if log_completion:
-                    try:
-                        assistant_reply = buildResponseFromGPTStream(full_response)
-                    except:
-                        print("Error parsing response")
-                        print(full_response)
-                        return web.Response(text=full_response)
-                    conversation.append(assistant_reply)
-                    print(conversation)
-                    saveConversation(conversation)
             else:
                 full_response = await response.text()
-
-                if log_completion:
-                    try:
-                        assistant_reply = buildResponseFromGPTStream(full_response)
-                    except:
-                        print("Error parsing response")
-                        print(full_response)
-                        return web.Response(text=full_response)
-                    conversation.append(assistant_reply)
-                    print(conversation)
-                    saveConversation(conversation)
                 return web.Response(text=full_response)
 
 async def handle(request):
