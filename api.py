@@ -130,7 +130,15 @@ async def evaluate(
     out_str = ''
     occurrence = {}
     for i in range(int(token_count)):
-        out, state = model.forward(pipeline.encode(ctx)[-ctx_limit:] if i == 0 else [token], state)
+        if i==0:
+            input_tokens = pipeline.encode(fullprompt)[-ctx_limit:]
+            for i in range(0, len(input_tokens), ctx_gpt_mode_chunks):
+                out, state = model.forward(input_tokens[i:min(ctx_gpt_mode_chunks, len(input_tokens)-i) + i], state)
+                gc.collect()
+                del out
+        else:
+            out, state = model.forward([token], state)
+            
         for n in occurrence:
             out[n] -= (args.alpha_presence + occurrence[n] * args.alpha_frequency)
             
@@ -209,14 +217,6 @@ async def buildPrompt(conversation, model, pipeline):
             del out
         unlockModel(0)
         cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # cache 30 secs
-    
-    for m in conversation[1:-1]:
-        if m['role'] == 'user':
-            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'assistant':
-            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'system':
-            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
             
     # hash current prompt to check for cached state
     state = None
@@ -230,6 +230,17 @@ async def buildPrompt(conversation, model, pipeline):
         print("## Using Cached State ##")
     else:
         prompt = fullprompt
+    
+    for m in conversation[1:-1]:
+        if m['role'] == 'user':
+            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+        elif m['role'] == 'assistant':
+            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+        elif m['role'] == 'system':
+            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
     
     # trim message
     last_message = conversation[-1]
