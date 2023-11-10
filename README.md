@@ -57,6 +57,7 @@ This will give an output like the following
 
 ## Step 4 - Route the convex OpenAI request to the proxy
 
-Under the convex environment settings, add the OPENAI_API_BASE (do not include the ending slash)
+Under the convex environment settings, add the OPENAI_API_BASE (do not include the ending slash).
+You will still need the openAI key, for the embeddings.
 
 ![Convex environment settings](./guides/img/convex_env.png)
