@@ -1,0 +1,8 @@
+# Ignore common hidden files
+.*
+
+# Model files
+*.pth
+
+# Include back gitignore, etc
+!.git*
