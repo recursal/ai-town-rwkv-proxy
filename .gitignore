@@ -1,6 +1,9 @@
 # Ignore common hidden files
 .*
 
+# python compile
+*.pyc
+
 # Model files
 *.pth
 

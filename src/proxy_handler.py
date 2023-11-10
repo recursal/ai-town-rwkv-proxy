@@ -9,12 +9,12 @@ base_url = "https://api.openai.com"
 
 # Proxy handling
 async def proxy_handler(request):
+    print("[PROXY] request started", request.path)
+
     url = base_url + request.path
-    
     method = request.method
     headers = dict(request.headers)
     headers['Host'] = "{0.netloc}".format(urlsplit(base_url))
-    print("PROXY request started", url)
     
     req_text = await request.text()
     
