@@ -10,18 +10,19 @@ import json
 from rwkv_tokenizer import TRIE_TOKENIZER
 
 from proxy_handler import proxy_handler
+from sample_logits import sample_logits
 
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
 ctx_gpt_mode_chunks = 64
-concurrent_req_limit = 5
+concurrent_req_limit = 50
 current_concurrent_req = 0
 #os.environ["CUDA_VISIBLE_DEVICES"] = ''
 os.environ["RWKV_JIT_ON"] = '1'
 os.environ["RWKV_CUDA_ON"] = '0' # if '1' then use CUDA kernel for seq mode (much faster)
 
-torch.set_num_threads(4)
+torch.set_num_threads(16)
 
 from rwkv.model import RWKV
 current_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
@@ -58,53 +59,6 @@ def lockModel(i):
 
 def unlockModel(i):
     lockedModels[i] = False
-
-def sample_logits_typical(logits, temperature=1.0, top_p=0.95, **kwargs):
-        probs = F.softmax(logits.float(), dim=-1)
-        logits = -torch.log(probs)
-        ent = torch.nansum(logits * probs, dim=-1, keepdim=True)
-        shifted_logits = torch.abs(logits - ent)
-        sorted_ids = torch.argsort(shifted_logits)
-        sorted_logits = shifted_logits[sorted_ids]
-        sorted_probs = probs[sorted_ids]
-        cumulative_probs = torch.cumsum(sorted_probs, dim=-1).cpu().numpy()
-        cutoff = np.sum(cumulative_probs < top_p)
-        probs[shifted_logits > sorted_logits[cutoff]] = 0
-        if temperature != 1.0:
-            probs = probs ** (1.0 / temperature)
-        out = torch.multinomial(probs, num_samples=1)[0]
-        return int(out)
-
-def sample_logits(logits, temperature=1.0, top_p=0.85, top_k=0):
-    probs = F.softmax(logits.float(), dim=-1)
-    top_k = int(top_k)
-    if probs.device == torch.device('cpu'):
-        probs = probs.numpy()
-        sorted_ids = np.argsort(probs)
-        sorted_probs = probs[sorted_ids][::-1]
-        cumulative_probs = np.cumsum(sorted_probs)
-        cutoff = float(sorted_probs[np.argmax(cumulative_probs >= top_p)])
-        probs[probs < cutoff] = 0
-        if top_k < len(probs) and top_k > 0:
-            probs[sorted_ids[:-top_k]] = 0
-        if temperature != 1.0:
-            probs = probs ** (1.0 / temperature)
-        probs = probs / np.sum(probs)
-        out = np.random.choice(a=len(probs), p=probs)
-        return int(out)
-    else:
-        sorted_ids = torch.argsort(probs)
-        sorted_probs = probs[sorted_ids]
-        sorted_probs = torch.flip(sorted_probs, dims=(0,))
-        cumulative_probs = torch.cumsum(sorted_probs, dim=-1).cpu().numpy()
-        cutoff = float(sorted_probs[np.argmax(cumulative_probs >= top_p)])
-        probs[probs < cutoff] = 0
-        if top_k < len(probs) and top_k > 0:
-            probs[sorted_ids[:-top_k]] = 0
-        if temperature != 1.0:
-            probs = probs ** (1.0 / temperature)
-        out = torch.multinomial(probs, num_samples=1)[0]
-        return int(out)
         
 async def evaluate(
     prompt,
@@ -317,48 +271,6 @@ async def buildOutputChunk(token):
         ],
     }
     return "data: " + json.dumps(object) + "\n\n"
-
-async def proxy_embedding(request):
-
-    url = base_url + request.path
-    
-    method = request.method
-    headers = dict(request.headers)
-
-    headers['Host'] = "{0.netloc}".format(urlsplit(base_url))
-
-    log_completion = False
-
-    if "chat/completions" in url:
-        log_completion = True
-        print("Completion request detected")
-    else:
-        print("Non-completion request detected")
-        print(url)
-
-    req_text = await request.text()
-    log_summary = False
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, data=req_text) as response:
-
-            headers = {k: v for k, v in response.headers.items()}
-            
-            full_response = ""
-            if isinstance(response, web.StreamResponse):
-                # Stream response back
-                response = web.StreamResponse(
-                    status=response.status,
-                    headers=headers,
-                )
-                response.content_length = response.content_length
-                
-                async for data in response.content.iter_any():
-                    full_response += data
-                    await response.write(data)
-            else:
-                full_response = await response.text()
-                return web.Response(text=full_response)
 
 async def handle(request):
     model, pipeline, index = await getModel()
