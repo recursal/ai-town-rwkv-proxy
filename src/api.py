@@ -8,26 +8,27 @@ import numpy as np
 from urllib.parse import urlsplit
 import json
 from rwkv_tokenizer import TRIE_TOKENIZER
-import aiohttp
+
+from proxy_handler import proxy_handler
+
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
 ctx_gpt_mode_chunks = 64
 concurrent_req_limit = 5
 current_concurrent_req = 0
-base_url = "https://api.openai.com/"
 #os.environ["CUDA_VISIBLE_DEVICES"] = ''
 os.environ["RWKV_JIT_ON"] = '1'
-os.environ["RWKV_CUDA_ON"] = '1' # if '1' then use CUDA kernel for seq mode (much faster)
+os.environ["RWKV_CUDA_ON"] = '0' # if '1' then use CUDA kernel for seq mode (much faster)
 
 torch.set_num_threads(4)
 
 from rwkv.model import RWKV
-current_dir = os.path.dirname(os.path.realpath(__file__))
-model_path = '/home/darok/Documents/GitHub/ai-town/rwkv-3b-ai-town-v1.pth'#current_dir + '/rwkv-ai-town-3b.pth'rwkv-3b-ai-town-v1.pth
+current_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
+model_path = current_dir + '/rwkv-3b-ai-town-v1.pth'
 
 models = [
-    RWKV(model=model_path, strategy='cuda bf16'),
+    RWKV(model=model_path, strategy='cpu fp32'),
 ]
 
 pipelines = []
@@ -299,6 +300,8 @@ async def handleRWKV(conversation, model, pipeline):
 
 from aiohttp import web
 import logging
+import aiohttp
+base_url = "https://api.openai.com/"
 
 async def buildOutputChunk(token):
     object = {
@@ -394,9 +397,10 @@ async def handle(request):
 
 app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
+
 app.add_routes([
     web.post('/v1/chat/completions', handle),
-    web.post('/v1/embeddings', proxy_embedding)
+    web.post('/v1/embeddings', proxy_handler)
 ])
 
 def cleanCachedStates():

@@ -3,3 +3,5 @@ ninja
 numpy
 pynvml
 torch
+aiohttp
+brotli
