@@ -12,6 +12,8 @@ from rwkv_tokenizer import TRIE_TOKENIZER
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
 ctx_gpt_mode_chunks = 64
+concurrent_req_limit = 5
+current_concurrent_req = 0
 base_url = "https://api.openai.com/"
 #os.environ["CUDA_VISIBLE_DEVICES"] = ''
 os.environ["RWKV_JIT_ON"] = '1'
@@ -130,15 +132,25 @@ async def evaluate(
     out_str = ''
     occurrence = {}
     for i in range(int(token_count)):
-        out, state = model.forward(pipeline.encode(ctx)[-ctx_limit:] if i == 0 else [token], state)
+        if i==0:
+            input_tokens = pipeline.encode(prompt)[-ctx_limit:]
+            for i in range(0, len(input_tokens), ctx_gpt_mode_chunks):
+                out, state = model.forward(input_tokens[i:min(ctx_gpt_mode_chunks, len(input_tokens)-i) + i], state)
+                gc.collect()
+            torch.cuda.empty_cache()
+        else:
+            out, state = model.forward([token], state)
+            
         for n in occurrence:
             out[n] -= (args.alpha_presence + occurrence[n] * args.alpha_frequency)
             
-        if typicalSampling:
-            token = sample_logits_typical(out, temperature=args.temperature, top_p=args.top_p)
-        else:
-            token = sample_logits(out, temperature=args.temperature, top_p=args.top_p)
+        # if typicalSampling:
+        #     token = sample_logits_typical(out, temperature=args.temperature, top_p=args.top_p)
+        # else:
+        #     token = sample_logits(out, temperature=args.temperature, top_p=args.top_p)
         
+        token = sample_logits(out, temperature=args.temperature, top_p=args.top_p)
+
         if token in args.token_stop:
             tmp = pipeline.decode(all_tokens[out_last:])
             yield tmp, state
@@ -154,9 +166,10 @@ async def evaluate(
         if '\ufffd' not in tmp:
             out_str += tmp
             yield tmp, state
+            del out
             out_last = i + 1
-
-        del out
+        else:
+            del out
 
     del occurrence
     torch.cuda.empty_cache()
@@ -209,14 +222,6 @@ async def buildPrompt(conversation, model, pipeline):
             del out
         unlockModel(0)
         cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # cache 30 secs
-    
-    for m in conversation[1:-1]:
-        if m['role'] == 'user':
-            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'assistant':
-            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'system':
-            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
             
     # hash current prompt to check for cached state
     state = None
@@ -231,6 +236,17 @@ async def buildPrompt(conversation, model, pipeline):
     else:
         prompt = fullprompt
     
+    for m in conversation[1:-1]:
+        if m['role'] == 'user':
+            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+        elif m['role'] == 'assistant':
+            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+        elif m['role'] == 'system':
+            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+    
     # trim message
     last_message = conversation[-1]
             
@@ -241,17 +257,27 @@ async def buildPrompt(conversation, model, pipeline):
     
 
 async def handleRWKV(conversation, model, pipeline):
+    global current_concurrent_req, concurrent_req_limit
     typicalSampling = True
     
     prompt, statee, fullprompt = await buildPrompt(conversation, model, pipeline)
     
     full_response = fullprompt
     response = ""
+
+    while current_concurrent_req >= concurrent_req_limit:
+        await asyncio.sleep(0.000001)
+
+
+    current_concurrent_req += 1
+
     async for token, statee in evaluate(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
         full_response += token
         response += token
         yield token
         await asyncio.sleep(0.000001)
+
+    current_concurrent_req -= 1
 
     
     print ("## Prompt ##")
