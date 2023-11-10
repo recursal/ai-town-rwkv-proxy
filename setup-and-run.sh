@@ -5,8 +5,8 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 cd "$SCRIPT_DIR"
 
 # Perform the file download
-MODEL_FILENAME="rwkv-3b-ai-town-v1.pth"
-MODEL_FILEURL="https://huggingface.co/recursal/rwkv-5-3b-ai-town/resolve/main/rwkv-3b-ai-town-v1.pth?download=true"
+MODEL_FILENAME="rwkv-1b5-ai-town-v1.3.pth"
+MODEL_FILEURL="https://huggingface.co/recursal/rwkv-5-1b5-ai-town/resolve/main/rwkv-1b5-ai-town-v1.3.pth?download=true"
 
 # Check if the model file exists
 if [ ! -f "$MODEL_FILENAME" ]; then

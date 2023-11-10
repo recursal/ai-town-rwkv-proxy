@@ -45,7 +45,7 @@ TOTAL_OUTPUT_TOKENS = 1
 torch.set_num_threads(14)
 
 current_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
-model_path = current_dir + '/rwkv-3b-ai-town-v1.pth'
+model_path = current_dir + '/rwkv-1b5-ai-town-v1.3.pth'
 
 models = [
     RWKV(model=model_path, strategy='cpu fp32')
