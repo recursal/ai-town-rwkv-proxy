@@ -220,6 +220,8 @@ async def buildPrompt(conversation, model, pipeline):
             out, statea = model.forward(input_tokens[i:min(ctx_gpt_mode_chunks, len(input_tokens)-i) + i], statea)
             gc.collect()
             del out
+
+        statea = [state.cpu() for state in statea]
         unlockModel(0)
         cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # cache 30 secs
             
@@ -232,6 +234,7 @@ async def buildPrompt(conversation, model, pipeline):
         # reset expiration
         cachedStates[cacheKey] = (state, time.time() + 60) # 1 minute
         state = copy.copy(state)
+        state = [s.cpu() for s in state]
         print("## Using Cached State ##")
     else:
         prompt = fullprompt
@@ -288,6 +291,7 @@ async def handleRWKV(conversation, model, pipeline):
     print ("##################")
         
     cacheKey = full_response.strip() + "<|im_end|>\n"
+    statee = [state.cpu() for state in statee]
     cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
     gc.collect()
         
