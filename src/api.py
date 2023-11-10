@@ -13,11 +13,16 @@ from sample_logits import sample_logits
 from urllib.parse import urlsplit
 import random
 from proxy_handler import proxy_handler
-from rwkv_inference import rwkv_inference
+from rwkv_inference import rwkv_inference, rwkv_inference_tokens
 
 global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
 CONCURRENT_REQ_COUNT = 0
 CONCURRENT_REQ_LIMIT = 50
+
+global INFERENCE_TIME_TAKEN, INFERENCE_PROMPT_TOKENS, INFERENCE_OUTPUT_TOKENS
+INFERENCE_TIME_TAKEN_S = 0
+INFERENCE_PROMPT_TOKENS = 0
+INFERENCE_OUTPUT_TOKENS = 0
 
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
@@ -174,7 +179,7 @@ async def buildOutputChunk(token):
     return "data: " + json.dumps(object) + "\n\n"
 
 async def chat_handle(request):
-    global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
+    global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT, INFERENCE_TIME_TAKEN_S
 
     print("[CHAT] request started", request.path)
 
@@ -206,10 +211,13 @@ async def chat_handle(request):
         # unlockModel(index)
 
         await response.write("data: [DONE]\n\n".encode())
-            
-        print(f"## Time taken: {time.time() - startTime} ##")
-        print(f"## Tokens generated: {totalTokens} ##")
-        print(f"## Tokens per second: {totalTokens / (time.time() - startTime)} ##")
+        
+        time_taken_s = time.time() - startTime
+        INFERENCE_TIME_TAKEN_S += time_taken_s
+
+        print(f"## Time taken: {time_taken_s} ##")
+        # print(f"## Tokens generated: {totalTokens} ##")
+        # print(f"## Tokens per second: {totalTokens / (time.time() - startTime)} ##")
         
         await response.write_eof()
         return response
