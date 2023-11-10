@@ -28,6 +28,8 @@ For subsequent runs you can just do just
 ./run.sh
 ```
 
+This will setup an API proxy (for embedding) + rwkv (for chat completion) at port 9997
+
 ## Step 3 - Deploy the AI Town proxy via cloudflared
 
 Due to current limitations, you will need to route your RWKV AI model, through a public URL. There are multiple ways to do it, but the easiest and most reliable is cloudflared which you can install with
