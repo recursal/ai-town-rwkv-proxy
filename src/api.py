@@ -12,6 +12,16 @@ from sample_logits import sample_logits
 
 from urllib.parse import urlsplit
 import random
+
+# nvmlInit()
+# gpu_h = nvmlDeviceGetHandleByIndex(0)
+ctx_limit = 8192
+ctx_gpt_mode_chunks = 1024
+
+#os.environ["CUDA_VISIBLE_DEVICES"] = ''
+os.environ["RWKV_JIT_ON"] = '1'
+os.environ["RWKV_CUDA_ON"] = '0' # if '1' then use CUDA kernel for seq mode (much faster)
+
 from proxy_handler import proxy_handler
 from rwkv_inference import rwkv_inference_tokens
 
@@ -29,14 +39,6 @@ INFERENCE_TIME_TAKEN_S = 1
 TOTAL_PROMPT_TOKENS = 1
 TOTAL_OUTPUT_TOKENS = 1
 
-# nvmlInit()
-# gpu_h = nvmlDeviceGetHandleByIndex(0)
-ctx_limit = 8192
-ctx_gpt_mode_chunks = 1024
-
-#os.environ["CUDA_VISIBLE_DEVICES"] = ''
-os.environ["RWKV_JIT_ON"] = '1'
-os.environ["RWKV_CUDA_ON"] = '0' # if '1' then use CUDA kernel for seq mode (much faster)
 
 torch.set_num_threads(14)
 
