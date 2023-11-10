@@ -7,3 +7,4 @@ brotli
 torch
 torchvision
 torchaudio
+protobuf==3.20.0

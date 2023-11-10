@@ -13,6 +13,9 @@ from sample_logits import sample_logits
 from urllib.parse import urlsplit
 import random
 
+from aiohttp import web
+import concurrent
+
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
@@ -38,7 +41,6 @@ global INFERENCE_TIME_TAKEN_S, TOTAL_PROMPT_TOKENS, TOTAL_OUTPUT_TOKENS
 INFERENCE_TIME_TAKEN_S = 1
 TOTAL_PROMPT_TOKENS = 1
 TOTAL_OUTPUT_TOKENS = 1
-
 
 torch.set_num_threads(14)
 
@@ -116,10 +118,6 @@ async def handleRWKV(conversation, model, pipeline):
     # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
     # gc.collect()
 
-from aiohttp import web
-import aiohttp
-base_url = "https://api.openai.com/"
-
 async def buildOutputChunk(token):
     object = {
         'object': 'chat.completion.chunk',
@@ -185,6 +183,27 @@ async def chat_handle(request):
         # unlockModel(index)
     finally:
         CONCURRENT_REQ_COUNT += -1
+
+async def chat_handle_fork(request):
+    # try:
+    #     # This does not work, throws error "printHelloWorld Needs to be awaited"
+    #     thread = threading.Thread(target=chat_handle, args=(request,))
+    #     thread.start()
+    # except (KeyboardInterrupt, SystemExit):
+    #     # Stop Thread when CTRL + C is pressed or when program is exited
+    #     thread.join()
+
+    # 2. Run in a custom thread pool:
+    loop = asyncio.get_event_loop()
+    
+    response = None
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        loop_response = await loop.run_in_executor(
+            executor,
+            lambda: asyncio.run_coroutine_threadsafe(chat_handle(request), loop)
+        )
+        response = await loop_response.result()
+    return response
 
 app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
