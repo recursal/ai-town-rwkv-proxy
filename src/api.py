@@ -57,20 +57,7 @@ async def getModel():
         i = int(random.random() * len(models))
     else:
         i = 0
-
-    # while True:
-    #     for i in range(len(models)):
-    #         if not lockedModels[i]:
-    #             #lockedModels[i] = True
-    #             return models[i], pipelines[i], i
-    #     await asyncio.sleep(0.1)
     return models[i], pipelines[i], i
-
-# def lockModel(i):
-#     lockedModels[i] = True
-
-# def unlockModel(i):
-#     lockedModels[i] = False
 
 # dictionary of tuples of key => (state, expiration)
 cachedStates = {}
@@ -91,19 +78,21 @@ async def handleRWKV(conversation, model, pipeline):
     typicalSampling = True
     
     fullprompt = await buildPrompt(conversation)
+    fullprompt_tokens = pipeline.encode(fullprompt)
+
     statee = None
 
     full_response = fullprompt
     response = ""
 
-    async for token, statee in rwkv_inference(fullprompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
+    async for token, statee in rwkv_inference_tokens(fullprompt_tokens, model, pipeline, typicalSampling=typicalSampling, state=statee):
         full_response += token
         response += token
         yield token
         await asyncio.sleep(0.000001)
     
     print ("## Prompt ##")
-    print (prompt)
+    print (fullprompt)
     print ("## Response ##")
     print (response)
     
