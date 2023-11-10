@@ -316,7 +316,7 @@ async def buildOutputChunk(token):
 
 async def proxy_embedding(request):
 
-    url = base_url + request.match_info['path']
+    url = base_url + request.path
     
     method = request.method
     headers = dict(request.headers)
@@ -334,17 +334,6 @@ async def proxy_embedding(request):
 
     req_text = await request.text()
     log_summary = False
-    conversation = []
-    if log_completion:
-        print("Finding 'prompt' in request")
-        data = json.loads(req_text)
-        for message in data['messages']:
-            conversation.append({'sender': message['role'], 'message': message['content']})
-            if "Summary:" in message['content']:
-                log_summary = True
-                print("Summary detected")
-                break
-        
 
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers, data=req_text) as response:
