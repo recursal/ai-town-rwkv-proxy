@@ -11,14 +11,16 @@ from rwkv_tokenizer import TRIE_TOKENIZER
 from sample_logits import sample_logits
 
 from urllib.parse import urlsplit
-
+import random
 from proxy_handler import proxy_handler
 from rwkv_inference import rwkv_inference
 
+global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
+CONCURRENT_REQ_COUNT = 0
+CONCURRENT_REQ_LIMIT = 50
+
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
-CONCURRENT_REQ_LIMIT = 50
-CONCURRENT_REQ_COUNT = 0
 ctx_limit = 8192
 ctx_gpt_mode_chunks = 1024
 
@@ -35,30 +37,29 @@ current_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
 model_path = current_dir + '/rwkv-3b-ai-town-v1.pth'
 
 models = [
-    RWKV(model=model_path, strategy='cpu fp32'),
+    RWKV(model=model_path, strategy='cpu fp32')
 ]
-
 pipelines = []
-
-
-lockedModels = []
-
 for model in models:
     pipelines.append(TRIE_TOKENIZER(current_dir + "/rwkv_vocab_v20230922_chatml.txt"))
-    lockedModels.append(False)
 
 # set thread count with pytorch
 
 import asyncio
 
 async def getModel():
+    if len(models) > 0:
+        i = int(random.random() * len(models))
+    else:
+        i = 0
+
     # while True:
     #     for i in range(len(models)):
     #         if not lockedModels[i]:
     #             #lockedModels[i] = True
     #             return models[i], pipelines[i], i
     #     await asyncio.sleep(0.1)
-    return models[0], pipelines[0], 0
+    return models[i], pipelines[i], i
 
 # def lockModel(i):
 #     lockedModels[i] = True
@@ -138,9 +139,6 @@ async def handleRWKV(conversation, model, pipeline):
         response += token
         yield token
         await asyncio.sleep(0.000001)
-
-    CONCURRENT_REQ_COUNT -= 1
-
     
     print ("## Prompt ##")
     print (prompt)
@@ -176,10 +174,11 @@ async def buildOutputChunk(token):
     return "data: " + json.dumps(object) + "\n\n"
 
 async def chat_handle(request):
+    global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
+
     print("[CHAT] request started", request.path)
 
     # Concurrency locking
-    global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
     while CONCURRENT_REQ_COUNT >= CONCURRENT_REQ_LIMIT:
         await asyncio.sleep(0.01)
     CONCURRENT_REQ_COUNT += 1
@@ -218,7 +217,7 @@ async def chat_handle(request):
         print("## Client disconnected ##")
         # unlockModel(index)
     finally:
-        CONCURRENT_REQ_COUNT -= 1
+        CONCURRENT_REQ_COUNT += -1
 
 app = web.Application()
 logging.basicConfig(level=logging.DEBUG)
