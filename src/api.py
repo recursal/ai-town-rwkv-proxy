@@ -19,8 +19,8 @@ global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
 CONCURRENT_REQ_COUNT = 0
 CONCURRENT_REQ_LIMIT = 50
 
-global INFERENCE_TIME_TAKEN, INFERENCE_PROMPT_TOKENS, INFERENCE_OUTPUT_TOKENS
-INFERENCE_TIME_TAKEN_S = 0
+global INFERENCE_TIME_TAKEN_S, INFERENCE_PROMPT_TOKENS, INFERENCE_OUTPUT_TOKENS
+INFERENCE_TIME_TAKEN_S = 0.001
 INFERENCE_PROMPT_TOKENS = 0
 INFERENCE_OUTPUT_TOKENS = 0
 
@@ -75,6 +75,7 @@ async def buildPrompt(conversation):
     return fullprompt
 
 async def handleRWKV(conversation, model, pipeline):
+    global INFERENCE_PROMPT_TOKENS, INFERENCE_OUTPUT_TOKENS
     typicalSampling = True
     
     fullprompt = await buildPrompt(conversation)
@@ -85,22 +86,27 @@ async def handleRWKV(conversation, model, pipeline):
     full_response = fullprompt
     response = ""
 
+    token_count = 0
     async for token, statee in rwkv_inference_tokens(fullprompt_tokens, model, pipeline, typicalSampling=typicalSampling, state=statee):
         full_response += token
         response += token
+        token_count += 1
         yield token
         await asyncio.sleep(0.000001)
     
-    print ("## Prompt ##")
+    # Save the total tokens
+    input_token_count = len(fullprompt_tokens)
+    INFERENCE_PROMPT_TOKENS += input_token_count
+    INFERENCE_OUTPUT_TOKENS += token_count
+
+    print (f"## Prompt ({input_token_count} tokens) ##")
     print (fullprompt)
-    print ("## Response ##")
+    print (f"## Response ({token_count} tokens) ##")
     print (response)
-    
     print ("##################")
         
-    cacheKey = full_response.strip() + "<|im_end|>\n"
-    statee = [state.cpu() for state in statee]
-
+    # cacheKey = full_response.strip() + "<|im_end|>\n"
+    # statee = [state.cpu() for state in statee]
     # cachedStates[hash(cacheKey)] = (statee, time.time() + 60 * 60) # cache state for 1 hour
     # gc.collect()
         
@@ -186,9 +192,15 @@ app.add_routes([
 # ---
 async def background_process():
     global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
+    global INFERENCE_TIME_TAKEN_S, INFERENCE_PROMPT_TOKENS, INFERENCE_OUTPUT_TOKENS
+
+    TOTAL_TOKENS_COUNT = INFERENCE_PROMPT_TOKENS + INFERENCE_OUTPUT_TOKENS
     while True:
         print(
-            f"\n~~ Concurrent req: {CONCURRENT_REQ_COUNT}"
+            f"\n~~ Concurrent req: {CONCURRENT_REQ_COUNT}",
+            f"\n~~ cummulative token count: {TOTAL_TOKENS_COUNT} tokens"
+            f"\n~~ cummulative inference time: {INFERENCE_TIME_TAKEN_S}s"
+            f"\n~~ tokens per second: {TOTAL_TOKENS_COUNT/INFERENCE_TIME_TAKEN_S}"
         )
         await asyncio.sleep(5)
     
