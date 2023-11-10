@@ -22,7 +22,11 @@ cd ai-town-rwkv-proxy
 ./setup-and-run.sh
 ```
 
-For subsequent runs you can just do
+For subsequent runs you can just do just
+
+```
+./run.sh
+```
 
 ## Step 3 - Deploy the AI Town proxy via cloudflared
 
