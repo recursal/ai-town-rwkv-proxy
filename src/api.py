@@ -72,74 +72,31 @@ async def getModel():
 # def unlockModel(i):
 #     lockedModels[i] = False
 
-def removeTokens(text):
-    return text.replace("<|im_start|>", "").replace("<|im_end|>", "")
-
 # dictionary of tuples of key => (state, expiration)
 cachedStates = {}
 
-async def buildPrompt(conversation, model, pipeline):
-    first_message = conversation[0]
-    fullprompt = f"<|im_start|>{first_message['role']}\n{removeTokens(first_message['content']).strip()}<|im_end|>\n"
+def removeTokens(text):
+    return text.replace("<|im_start|>", "").replace("<|im_end|>", "")
 
-    # # add system prompt to cache
-    # cacheKey = hash(fullprompt)
-    # if cacheKey not in cachedStates.keys():
-    #     lockModel(0)
-    #     input_tokens = pipeline.encode(fullprompt)[-ctx_limit:]
-    #     statea = None
-    #     for i in range(0, len(input_tokens), ctx_gpt_mode_chunks):
-    #         out, statea = model.forward(input_tokens[i:min(ctx_gpt_mode_chunks, len(input_tokens)-i) + i], statea)
-    #         gc.collect()
-    #         del out
-
-    #     statea = [state.cpu() for state in statea]
-    #     unlockModel(0)
-    #     cachedStates[hash(fullprompt)] = (statea, time.time() + 30) # cache 30 secs
-            
-    # hash current prompt to check for cached state
-    state = None
-    cacheKey = hash(fullprompt)
-
-    prompt = fullprompt
-    # if cacheKey in cachedStates.keys():
-    #     state, expiration = cachedStates[cacheKey]
-    #     prompt = ""
-    #     # reset expiration
-    #     cachedStates[cacheKey] = (state, time.time() + 60) # 1 minute
-    #     state = copy.copy(state)
-    #     state = [s.cpu() for s in state]
-    #     print("## Using Cached State ##")
-    
-    for m in conversation[1:-1]:
-        if m['role'] == 'user':
-            fullprompt += "<|im_start|>user\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'assistant':
-            fullprompt += "<|im_start|>assistant\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-        elif m['role'] == 'system':
-            fullprompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-            prompt += "<|im_start|>system\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
-    
-    # trim message
-    last_message = conversation[-1]
-            
-    prompt += f"<|im_start|>{last_message['role']}\n" + removeTokens(last_message['content']).strip() + "<|im_end|>\n<|im_start|>assistant\n"
-    fullprompt += f"<|im_start|>{last_message['role']}\n" + removeTokens(last_message['content']).strip() + "<|im_end|>\n<|im_start|>assistant\n"
-    
-    return prompt, state, fullprompt
-    
+async def buildPrompt(conversation):
+    # Build the prompt accordingly
+    fullprompt = ""
+    for m in conversation:
+        fullprompt += "<|im_start|>"+ m["role"] +"\n" + removeTokens(m['content']).strip() + "<|im_end|>\n"
+    # Start of assistant response
+    fullprompt += "<|im_start|>assistant\n"
+    return fullprompt
 
 async def handleRWKV(conversation, model, pipeline):
     typicalSampling = True
     
-    prompt, statee, fullprompt = await buildPrompt(conversation, model, pipeline)
-    
+    fullprompt = await buildPrompt(conversation)
+    statee = None
+
     full_response = fullprompt
     response = ""
 
-    async for token, statee in rwkv_inference(prompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
+    async for token, statee in rwkv_inference(fullprompt, model, pipeline, typicalSampling=typicalSampling, state=statee):
         full_response += token
         response += token
         yield token
