@@ -8,6 +8,7 @@ import numpy as np
 from urllib.parse import urlsplit
 import json
 from rwkv_tokenizer import TRIE_TOKENIZER
+import aiohttp
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
 ctx_limit = 8192
