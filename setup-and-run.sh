@@ -21,3 +21,6 @@ fi
 echo "## Ensuring requirements.txt is fullfilled with 'pip3 install -r requirements.txt'"
 pip3 install -r requirements.txt
 echo "## requirements.txt installation should be completed"
+
+# RUN IT
+python3 ./src/api.py
