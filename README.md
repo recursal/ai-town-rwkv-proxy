@@ -12,7 +12,7 @@ The AI Model is based on RWKV, which you can find out more here : https://wiki.r
 
 # About RWKV
 
-RWKV, is a linear transformer, with 10-100x lower inference cost, light weight enough that the 3B model can run on
+RWKV, is a linear transformer, without eval compromises, and with 10-100x lower inference cost, light weight enough that the 3B model can run on
 - 16GB ram
 - any modern CPU
 
