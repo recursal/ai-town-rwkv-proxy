@@ -6,7 +6,7 @@
 >
 > This project is to help put that a step closer, in running a full AI town locally on any modern device
 
-[AI-town-screenshot](./guides/img/AI-town-screenshot.png)
+![AI-town-screenshot](./guides/img/AI-town-screenshot.png)
 
 The AI Model is based on RWKV, which you can find out more here : https://wiki.rwkv.com
 
