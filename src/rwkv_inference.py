@@ -9,7 +9,13 @@ ctx_gpt_mode_chunks = 1024
 
 # Cache logic ?
 global CACHE_ARR, CACHE_SIZE
-CACHE_SIZE = 100
+
+# Due to the ram requirements of caching, we will disable it by default
+# you can enable this if you have > 30GB of ram. But once swapping occurs
+# the overall tokens per second will drop by half sadly
+#
+# @TODO: Consider caching to disk? (might need to explore this further)
+CACHE_SIZE = 0
 CACHE_ARR = [None]*CACHE_SIZE
 
 # Perform prefix matching
@@ -25,6 +31,8 @@ def prefixMatching(long, short):
 # Get from cache, a given prompt_tokens
 def getFromCache(in_prompt_tokens):
     global CACHE_ARR, CACHE_SIZE
+    if( CACHE_SIZE == 0 ):
+        return [], None, None, in_prompt_tokens
 
     in_prompt_len = len(in_prompt_tokens)
 
@@ -68,6 +76,10 @@ def getFromCache(in_prompt_tokens):
 # Insert into the cache
 def setIntoCache(in_prompt_tokens, logits, state):
     global CACHE_ARR, CACHE_SIZE
+
+    # Skip if cache is disabled
+    if CACHE_SIZE == 0:
+        return
 
     now = time.time()
     cache_obj = {

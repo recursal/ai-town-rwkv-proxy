@@ -1,12 +1,24 @@
 # AI Town - RWKV Proxy
 
-> Disclaimer: Currently it is not possible to run AI town fully offline, as it requires
+> Disclaimer: Currently it is not possible to run AI town 100% offline, as it requires
 > - convex for the api backend + vector DB
 > - openAI embeddings
+
+[AI-town-screenshot](./guides/img/AI-town-screenshot.png)
 
 The AI Model is based on RWKV, which you can find out more here : https://wiki.rwkv.com
 
 However this project is to help put that a step closer, in running a full AI town locally on any modern device
+
+# About RWKV
+
+RWKV, is a linear transformer, with 10-100x lower inference cost, light weight enough that the 3B model can run on
+- 16GB ram
+- any modern CPU
+
+If you want to push it lower, you can run the 1.5B model, which works on a raspberry pi with 8gb ram, but gets wierd results time to time
+
+> PS: The code used here is not fully optimized, and there is definately lots of room to scale higher the bottlenecks (see low CPU usage)
 
 # Setup steps
 
@@ -67,3 +79,26 @@ Under the convex environment settings, add the OPENAI_API_BASE (do not include t
 You will still need the openAI key, for the embeddings.
 
 ![Convex environment settings](./guides/img/convex_env.png)
+
+## Extra step - How do I scale up the character count
+
+> At present, we only recommend scaling UP TO 75 characters, any more then that and there is stability issues on the AI town / convex side, for path finding, etc (not the AI model!!)
+>
+> Warning: It is very possible to hit the convex limits in a day or two with 75 characters, on the free tier
+
+You can copy our character descriptions in [our ts file here](./character-description.ts)
+
+Modify the last line to the number of characters `.slice(0, 75)`
+
+Inside your AI town project under `data/character.ts`, replace the description accordingly.
+
+You will need to reset your town for the change to take effect
+
+```
+# Nuke everything
+npx convex run testing:stop
+npx convex run testing:wipeAllTables
+
+# Start again
+npm run dev
+```
