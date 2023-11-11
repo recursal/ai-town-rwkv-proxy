@@ -1,10 +1,6 @@
 # AI Town - RWKV Proxy
 
-> Disclaimer: Currently it is not possible to run AI town 100% offline, as it requires
-> - convex for the api backend + vector DB
-> - openAI embeddings
->
-> This project is to help put that a step closer, in running a full AI town locally on any modern device
+Run a large AI town, locally, via RWKV !
 
 ![AI-town-screenshot](./guides/img/AI-town-screenshot.png)
 
@@ -21,6 +17,12 @@ If you want to push it lower, you can run the 1.5B model, which works on a raspb
 > PS: The code used here is not fully optimized, and there is definately lots of room to scale higher the bottlenecks (see low CPU usage)
 
 # Setup steps
+
+> Disclaimer: Currently it is not possible to run AI town 100% offline, as it requires
+> - convex for the api backend + vector DB
+> - openAI embeddings
+>
+> This project is to help put that a step closer, in running a full AI town locally on any modern device
 
 ## Step 1 - Setup AI town as per normal
 
