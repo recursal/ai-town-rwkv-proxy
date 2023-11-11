@@ -9,7 +9,7 @@ ctx_gpt_mode_chunks = 1024
 
 # Cache logic ?
 global CACHE_ARR, CACHE_SIZE
-CACHE_SIZE = 1000
+CACHE_SIZE = 100
 CACHE_ARR = [None]*CACHE_SIZE
 
 # Perform prefix matching
@@ -143,8 +143,9 @@ async def rwkv_inference_tokens(
         out, state = model.forward(input_tokens[i:last_idx], state)
 
         # Store into cache
-        joint_input = cache_tokens + input_tokens[:last_idx]
-        setIntoCache(joint_input, out, state)
+        if i == 0:
+            joint_input = cache_tokens + input_tokens[:last_idx]
+            setIntoCache(joint_input, out, state)
 
     # Additional token gen
     for i in range(int(token_count)):
