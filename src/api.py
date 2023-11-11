@@ -223,7 +223,7 @@ async def background_process():
         total_token_count = TOTAL_PROMPT_TOKENS + TOTAL_OUTPUT_TOKENS
         print(
             f"\n~~ Concurrent req: {CONCURRENT_REQ_COUNT}",
-            f"\n~~ cummulative token count: {total_token_count} tokens",
+            f"\n~~ cummulative input/output count: {TOTAL_PROMPT_TOKENS} / {TOTAL_OUTPUT_TOKENS} tokens",
             f"\n~~ cummulative inference time: {INFERENCE_TIME_TAKEN_S}s",
             f"\n~~ tokens per second: {total_token_count/INFERENCE_TIME_TAKEN_S}"
         )
