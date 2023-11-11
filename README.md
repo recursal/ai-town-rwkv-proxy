@@ -4,6 +4,8 @@
 > - convex for the api backend + vector DB
 > - openAI embeddings
 
+The AI Model is based on RWKV, which you can find out more here : https://wiki.rwkv.com
+
 However this project is to help put that a step closer, in running a full AI town locally on any modern device
 
 # Setup steps
@@ -15,17 +17,19 @@ Make sure it works first, before rerouting to RWKV
 
 ## Step 2 - Clone the AI-TOWN-RWKV-proxy project
 
-```
+```bash
 git clone https://github.com/recursal/ai-town-rwkv-proxy.git
 cd ai-town-rwkv-proxy
 
-./setup-and-run.sh
-```
+# (recommended) For running the 3B model on CPU
+./setup-and-run-3B.sh
 
-For subsequent runs you can just do just
+# (not recommended) only for very low-end devices, eg. raspberry pi's
+./setup-and-run-1B5.sh
 
-```
-./run.sh
+# If you want to run on the nvidia GPU, you can pass in "cuda bf16"
+# more advance strategies can be found at : https://pypi.org/project/rwkv/
+./setup-and-run-3B.sh "cuda bf16"
 ```
 
 This will setup an API proxy (for embedding) + rwkv (for chat completion) at port 9997
@@ -33,6 +37,8 @@ This will setup an API proxy (for embedding) + rwkv (for chat completion) at por
 ## Step 3 - Deploy the AI Town proxy via cloudflared
 
 Due to current limitations, you will need to route your RWKV AI model, through a public URL. There are multiple ways to do it, but the easiest and most reliable is cloudflared which you can install with
+
+You will need to run this in another shell
 
 ```bash
 npm install -g cloudflared

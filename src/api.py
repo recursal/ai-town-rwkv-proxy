@@ -2,6 +2,7 @@ import copy
 import os, gc, torch
 import time
 import logging
+import sys
 
 from pynvml import *
 from torch.nn import functional as F
@@ -15,6 +16,7 @@ import random
 
 from aiohttp import web
 import concurrent
+import asyncio
 
 # nvmlInit()
 # gpu_h = nvmlDeviceGetHandleByIndex(0)
@@ -24,14 +26,6 @@ ctx_gpt_mode_chunks = 1024
 #os.environ["CUDA_VISIBLE_DEVICES"] = ''
 os.environ["RWKV_JIT_ON"] = '1'
 os.environ["RWKV_CUDA_ON"] = '0' # if '1' then use CUDA kernel for seq mode (much faster)
-
-from proxy_handler import proxy_handler
-from rwkv_inference import rwkv_inference_tokens
-
-from rwkv.model import RWKV
-from rwkv.utils import PIPELINE, PIPELINE_ARGS
-
-import asyncio
 
 global CONCURRENT_REQ_COUNT, CONCURRENT_REQ_LIMIT
 CONCURRENT_REQ_COUNT = 0
@@ -44,11 +38,26 @@ TOTAL_OUTPUT_TOKENS = 1
 
 torch.set_num_threads(14)
 
+# Get the filename, and system strat
+model_filename = "rwkv-1b5-ai-town-v1.3.pth" if len(sys.argv) <= 1 else sys.argv[1]
+model_strategy = "cpu fp32" if len(sys.argv) <= 2 else sys.argv[2]
+if model_filename == None:
+    model_filename = "rwkv-1b5-ai-town-v1.3.pth"
+if model_strategy == None:
+    model_strategy = "cpu fp32"
+
+# RWKV pip libraries
+from proxy_handler import proxy_handler
+from rwkv_inference import rwkv_inference_tokens
+
+from rwkv.model import RWKV
+from rwkv.utils import PIPELINE, PIPELINE_ARGS
+
 current_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
-model_path = current_dir + '/rwkv-1b5-ai-town-v1.3.pth'
+model_path = current_dir + f"/{model_filename}"
 
 models = [
-    RWKV(model=model_path, strategy='cpu fp32')
+    RWKV(model=model_path, strategy=model_strategy)
 ]
 pipelines = []
 for model in models:
@@ -184,6 +193,10 @@ async def chat_handle(request):
     finally:
         CONCURRENT_REQ_COUNT += -1
 
+#
+# I COULD NOT GET THIS TO WORK
+# SOMEONE WITH MORE EXPERIENCE WITH SERVER PYTHON, PLEASE FIX IT
+# 
 async def chat_handle_fork(request):
     # try:
     #     # This does not work, throws error "printHelloWorld Needs to be awaited"
