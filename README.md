@@ -3,12 +3,12 @@
 > Disclaimer: Currently it is not possible to run AI town 100% offline, as it requires
 > - convex for the api backend + vector DB
 > - openAI embeddings
+>
+> This project is to help put that a step closer, in running a full AI town locally on any modern device
 
 [AI-town-screenshot](./guides/img/AI-town-screenshot.png)
 
 The AI Model is based on RWKV, which you can find out more here : https://wiki.rwkv.com
-
-However this project is to help put that a step closer, in running a full AI town locally on any modern device
 
 # About RWKV
 
