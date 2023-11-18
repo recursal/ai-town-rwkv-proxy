@@ -7,5 +7,9 @@
 # Model files
 *.pth
 
+# Assets file to download
+assets/*/*
+!assets/*/README.md
+
 # Include back gitignore, etc
 !.git*

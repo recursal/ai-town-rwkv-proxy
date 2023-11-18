@@ -1,0 +1,23 @@
+{
+  "name": "ai-town-rwkv-proxy",
+  "version": "1.0.0",
+  "description": "RWKV AI town simple inference project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/recursal/ai-town-rwkv-proxy.git"
+  },
+  "keywords": [
+    "RWKV",
+    "AI-Town"
+  ],
+  "author": "recursal AI",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/recursal/ai-town-rwkv-proxy/issues"
+  },
+  "homepage": "https://github.com/recursal/ai-town-rwkv-proxy#readme"
+}

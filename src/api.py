@@ -54,7 +54,7 @@ from rwkv.model import RWKV
 from rwkv.utils import PIPELINE, PIPELINE_ARGS
 
 current_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
-model_path = current_dir + f"/{model_filename}"
+model_path = current_dir + f"/assets/models/{model_filename}"
 
 models = [
     RWKV(model=model_path, strategy=model_strategy)

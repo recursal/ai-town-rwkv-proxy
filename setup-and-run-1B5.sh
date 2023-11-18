@@ -9,7 +9,7 @@ MODEL_FILENAME="rwkv-1b5-ai-town-v1.3.pth"
 MODEL_FILEURL="https://huggingface.co/recursal/rwkv-5-1b5-ai-town/resolve/main/rwkv-1b5-ai-town-v1.3.pth?download=true"
 
 # Check if the model file exists
-if [ ! -f "$MODEL_FILENAME" ]; then
+if [ ! -f "./assets/models/$MODEL_FILENAME" ]; then
     # If not, download it
     echo "## RWKV AI town file '$MODEL_FILENAME' is missing, downloading ..."
     curl -L "$MODEL_FILEURL" -o "$MODEL_FILENAME"
