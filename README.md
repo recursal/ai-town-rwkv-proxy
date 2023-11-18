@@ -12,7 +12,7 @@ RWKV, is a linear transformer, without eval compromises, and with 10-100x lower 
 - 16GB ram
 - any modern CPU
 
-If you want to push it lower, you can run the 1.5B model, which works on a raspberry pi with 8gb ram, but gets wierd results time to time
+If you want to push it lower, you can run the 1.5B model, which works on a raspberry pi with 8gb ram, but gets weird results time to time
 
 > PS: The code used here is not fully optimized, and there is definately lots of room to scale higher the bottlenecks (see low CPU usage)
 
