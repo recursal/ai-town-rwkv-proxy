@@ -8,7 +8,8 @@
 *.pth
 
 # Assets file to download
-assets/*/*
+assets/ai00/*
+assets/models/*
 !assets/*/README.md
 
 # Include back gitignore, etc
