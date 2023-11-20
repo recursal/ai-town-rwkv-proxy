@@ -12,5 +12,8 @@ assets/ai00/*
 assets/models/*
 !assets/*/README.md
 
+# Node modules
+node_modules/
+
 # Include back gitignore, etc
 !.git*

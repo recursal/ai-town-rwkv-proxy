@@ -19,5 +19,10 @@
   "bugs": {
     "url": "https://github.com/recursal/ai-town-rwkv-proxy/issues"
   },
-  "homepage": "https://github.com/recursal/ai-town-rwkv-proxy#readme"
+  "homepage": "https://github.com/recursal/ai-town-rwkv-proxy#readme",
+  "dependencies": {
+    "http-proxy": "^1.18.1",
+    "node-fetch": "^3.3.2",
+    "request": "^2.88.2"
+  }
 }
