@@ -6,6 +6,8 @@ Run a large AI town, locally, via RWKV !
 
 The AI Model is based on RWKV, which you can find out more here : https://wiki.rwkv.com
 
+> PS: You can now use https://aitown-demo-api.recursal.ai with your OPENAI_API_KEY , directly to run at scale instead.
+
 # About RWKV
 
 RWKV, is a linear transformer, without eval compromises, and with 10-100x lower inference cost, light weight enough that the 3B model can run on
@@ -81,6 +83,8 @@ Under the convex environment settings, add the OPENAI_API_BASE (do not include t
 You will still need the openAI key, for the embeddings.
 
 ![Convex environment settings](./guides/img/convex_env.png)
+
+> PS: You can now use https://aitown-demo-api.recursal.ai with your OPENAI_API_KEY , directly to run at scale instead.
 
 ## Extra step - How do I scale up the character count
 
